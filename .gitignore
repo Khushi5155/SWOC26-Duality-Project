@@ -1,4 +1,4 @@
-dataset/
+data/
 runs/
 checkpoints/
 .env
