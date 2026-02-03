@@ -1,0 +1,6 @@
+dataset/
+runs/
+checkpoints/
+.env
+*.pth
+*.pt
