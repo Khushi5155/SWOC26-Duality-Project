@@ -1,0 +1,40 @@
+# Duality AI Offroad Semantic Segmentation - Requirements
+# Python 3.8+ required
+# Install: pip install -r requirements.txt
+
+# Core Deep Learning Framework
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Computer Vision
+opencv-python>=4.8.0
+pillow>=10.0.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Data Augmentation
+albumentations>=1.3.0
+
+# Pre-trained Segmentation Models
+segmentation-models-pytorch>=0.3.3
+
+# Metrics and Evaluation
+scikit-learn>=1.3.0
+scikit-image>=0.21.0
+
+# Progress Bars and Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
+
+# Experiment Tracking
+tensorboard>=2.13.0
+
+# Image Processing Utilities
+imageio>=2.31.0
