@@ -1,5 +1,5 @@
 """
-Segmentation Training Script
+Segmentation Training Script - Google Colab Version
 Converted from train_mask.ipynb
 Trains a segmentation head on top of DINOv2 backbone
 """
@@ -17,6 +17,7 @@ import cv2
 import os
 import torchvision
 from tqdm import tqdm
+import argparse
 
 # Set matplotlib to non-interactive backend
 plt.switch_backend('Agg')
@@ -75,7 +76,10 @@ class MaskDataset(Dataset):
         self.masks_dir = os.path.join(data_dir, 'Segmentation')
         self.transform = transform
         self.mask_transform = mask_transform
-        self.data_ids = os.listdir(self.image_dir)
+        
+        # Get all image files
+        self.data_ids = [f for f in os.listdir(self.image_dir) if f.endswith('.png')]
+        print(f"Found {len(self.data_ids)} images in {data_dir}")
 
     def __len__(self):
         return len(self.data_ids)
@@ -83,7 +87,6 @@ class MaskDataset(Dataset):
     def __getitem__(self, idx):
         data_id = self.data_ids[idx]
         img_path = os.path.join(self.image_dir, data_id)
-        # Both color images and masks are .png files with same name
         mask_path = os.path.join(self.masks_dir, data_id)
 
         image = Image.open(img_path).convert("RGB")
@@ -240,15 +243,15 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'training_curves.png'))
+    plt.savefig(os.path.join(output_dir, 'training_curves.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Saved training curves to '{output_dir}/training_curves.png'")
+    print(f"✓ Saved training curves to '{output_dir}/training_curves.png'")
 
     # Plot 2: IoU curves
     plt.figure(figsize=(12, 5))
     
     plt.subplot(1, 2, 1)
-    plt.plot(history['train_iou'], label='Train IoU')
+    plt.plot(history['train_iou'], label='Train IoU', marker='o')
     plt.title('Train IoU vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('IoU')
@@ -256,7 +259,7 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
     
     plt.subplot(1, 2, 2)
-    plt.plot(history['val_iou'], label='Val IoU')
+    plt.plot(history['val_iou'], label='Val IoU', marker='o', color='orange')
     plt.title('Validation IoU vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('IoU')
@@ -264,15 +267,15 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'iou_curves.png'))
+    plt.savefig(os.path.join(output_dir, 'iou_curves.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Saved IoU curves to '{output_dir}/iou_curves.png'")
+    print(f"✓ Saved IoU curves to '{output_dir}/iou_curves.png'")
 
     # Plot 3: Dice curves
     plt.figure(figsize=(12, 5))
     
     plt.subplot(1, 2, 1)
-    plt.plot(history['train_dice'], label='Train Dice')
+    plt.plot(history['train_dice'], label='Train Dice', marker='s')
     plt.title('Train Dice vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Dice Score')
@@ -280,7 +283,7 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
     
     plt.subplot(1, 2, 2)
-    plt.plot(history['val_dice'], label='Val Dice')
+    plt.plot(history['val_dice'], label='Val Dice', marker='s', color='green')
     plt.title('Validation Dice vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Dice Score')
@@ -288,16 +291,16 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'dice_curves.png'))
+    plt.savefig(os.path.join(output_dir, 'dice_curves.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Saved Dice curves to '{output_dir}/dice_curves.png'")
+    print(f"✓ Saved Dice curves to '{output_dir}/dice_curves.png'")
 
     # Plot 4: Combined metrics plot
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=(14, 10))
 
     plt.subplot(2, 2, 1)
-    plt.plot(history['train_loss'], label='train')
-    plt.plot(history['val_loss'], label='val')
+    plt.plot(history['train_loss'], label='train', marker='o')
+    plt.plot(history['val_loss'], label='val', marker='o')
     plt.title('Loss vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
@@ -305,8 +308,8 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
 
     plt.subplot(2, 2, 2)
-    plt.plot(history['train_iou'], label='train')
-    plt.plot(history['val_iou'], label='val')
+    plt.plot(history['train_iou'], label='train', marker='o')
+    plt.plot(history['val_iou'], label='val', marker='o')
     plt.title('IoU vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('IoU')
@@ -314,8 +317,8 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
 
     plt.subplot(2, 2, 3)
-    plt.plot(history['train_dice'], label='train')
-    plt.plot(history['val_dice'], label='val')
+    plt.plot(history['train_dice'], label='train', marker='s')
+    plt.plot(history['val_dice'], label='val', marker='s')
     plt.title('Dice Score vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Dice Score')
@@ -323,8 +326,8 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
 
     plt.subplot(2, 2, 4)
-    plt.plot(history['train_pixel_acc'], label='train')
-    plt.plot(history['val_pixel_acc'], label='val')
+    plt.plot(history['train_pixel_acc'], label='train', marker='^')
+    plt.plot(history['val_pixel_acc'], label='val', marker='^')
     plt.title('Pixel Accuracy vs Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Pixel Accuracy')
@@ -332,9 +335,9 @@ def save_training_plots(history, output_dir):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'all_metrics_curves.png'))
+    plt.savefig(os.path.join(output_dir, 'all_metrics_curves.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Saved combined metrics curves to '{output_dir}/all_metrics_curves.png'")
+    print(f"✓ Saved combined metrics to '{output_dir}/all_metrics_curves.png'")
 
 
 def save_history_to_file(history, output_dir):
@@ -343,10 +346,12 @@ def save_history_to_file(history, output_dir):
     filepath = os.path.join(output_dir, 'evaluation_metrics.txt')
 
     with open(filepath, 'w') as f:
-        f.write("TRAINING RESULTS\n")
-        f.write("=" * 50 + "\n\n")
+        f.write("=" * 80 + "\n")
+        f.write(" " * 20 + "TRAINING RESULTS - PHASE 1 BASELINE\n")
+        f.write("=" * 80 + "\n\n")
 
-        f.write("Final Metrics:\n")
+        f.write("Final Metrics (Last Epoch):\n")
+        f.write("-" * 80 + "\n")
         f.write(f"  Final Train Loss:     {history['train_loss'][-1]:.4f}\n")
         f.write(f"  Final Val Loss:       {history['val_loss'][-1]:.4f}\n")
         f.write(f"  Final Train IoU:      {history['train_iou'][-1]:.4f}\n")
@@ -355,21 +360,24 @@ def save_history_to_file(history, output_dir):
         f.write(f"  Final Val Dice:       {history['val_dice'][-1]:.4f}\n")
         f.write(f"  Final Train Accuracy: {history['train_pixel_acc'][-1]:.4f}\n")
         f.write(f"  Final Val Accuracy:   {history['val_pixel_acc'][-1]:.4f}\n")
-        f.write("=" * 50 + "\n\n")
+        f.write("\n")
 
-        f.write("Best Results:\n")
+        f.write("=" * 80 + "\n")
+        f.write("Best Results Across All Epochs:\n")
+        f.write("-" * 80 + "\n")
         f.write(f"  Best Val IoU:      {max(history['val_iou']):.4f} (Epoch {np.argmax(history['val_iou']) + 1})\n")
         f.write(f"  Best Val Dice:     {max(history['val_dice']):.4f} (Epoch {np.argmax(history['val_dice']) + 1})\n")
         f.write(f"  Best Val Accuracy: {max(history['val_pixel_acc']):.4f} (Epoch {np.argmax(history['val_pixel_acc']) + 1})\n")
         f.write(f"  Lowest Val Loss:   {min(history['val_loss']):.4f} (Epoch {np.argmin(history['val_loss']) + 1})\n")
-        f.write("=" * 50 + "\n\n")
+        f.write("\n")
 
+        f.write("=" * 80 + "\n")
         f.write("Per-Epoch History:\n")
-        f.write("-" * 100 + "\n")
+        f.write("-" * 105 + "\n")
         headers = ['Epoch', 'Train Loss', 'Val Loss', 'Train IoU', 'Val IoU',
                    'Train Dice', 'Val Dice', 'Train Acc', 'Val Acc']
         f.write("{:<8} {:<12} {:<12} {:<12} {:<12} {:<12} {:<12} {:<12} {:<12}\n".format(*headers))
-        f.write("-" * 100 + "\n")
+        f.write("-" * 105 + "\n")
 
         n_epochs = len(history['train_loss'])
         for i in range(n_epochs):
@@ -384,8 +392,9 @@ def save_history_to_file(history, output_dir):
                 history['train_pixel_acc'][i],
                 history['val_pixel_acc'][i]
             ))
+        f.write("=" * 80 + "\n")
 
-    print(f"Saved evaluation metrics to {filepath}")
+    print(f"✓ Saved evaluation metrics to '{filepath}'")
 
 
 # ============================================================================
@@ -393,21 +402,47 @@ def save_history_to_file(history, output_dir):
 # ============================================================================
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Train segmentation model')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--data_dir', type=str, default='/content/drive/MyDrive/SWOC26_Training/data/Train',
+                        help='Path to training data directory')
+    parser.add_argument('--val_dir', type=str, default='/content/drive/MyDrive/SWOC26_Training/data/Val',
+                        help='Path to validation data directory')
+    parser.add_argument('--save_dir', type=str, default='/content/drive/MyDrive/SWOC26_Training/models/baseline',
+                        help='Directory to save models and results')
+    
+    args = parser.parse_args()
+
     # Configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-
+    print("=" * 80)
+    print(" " * 25 + "PHASE 1: BASELINE TRAINING")
+    print("=" * 80)
+    print(f"\n🔧 Configuration:")
+    print(f"  Device: {device}")
+    if torch.cuda.is_available():
+        print(f"  GPU: {torch.cuda.get_device_name(0)}")
+        print(f"  GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+    
     # Hyperparameters
-    batch_size = 2
-    w = int(((960 / 2) // 14) * 14)
-    h = int(((540 / 2) // 14) * 14)
-    lr = 1e-4
-    n_epochs = 10
+    batch_size = args.batch_size
+    w = int(((960 / 2) // 14) * 14)  # 476 → adjusted for DINOv2 patch size
+    h = int(((540 / 2) // 14) * 14)  # 266 → adjusted for DINOv2 patch size
+    lr = args.lr
+    n_epochs = args.epochs
 
-    # Output directory (relative to script location)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_dir = os.path.join(script_dir, 'train_stats')
-    os.makedirs(output_dir, exist_ok=True)
+    print(f"  Batch size: {batch_size}")
+    print(f"  Learning rate: {lr}")
+    print(f"  Epochs: {n_epochs}")
+    print(f"  Image size: {h}x{w}")
+
+    # Create output directory
+    os.makedirs(args.save_dir, exist_ok=True)
+    train_stats_dir = os.path.join(args.save_dir, 'train_stats')
+    os.makedirs(train_stats_dir, exist_ok=True)
 
     # Transforms
     transform = transforms.Compose([
@@ -421,28 +456,30 @@ def main():
         transforms.ToTensor(),
     ])
 
-    # Dataset paths (relative to script location)
-    data_dir = os.path.join(script_dir, '..', 'Offroad_Segmentation_Training_Dataset', 'train')
-    val_dir = os.path.join(script_dir, '..', 'Offroad_Segmentation_Training_Dataset', 'val')
-
     # Create datasets
-    trainset = MaskDataset(data_dir=data_dir, transform=transform, mask_transform=mask_transform)
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    print(f"\n📁 Loading datasets...")
+    print(f"  Train dir: {args.data_dir}")
+    print(f"  Val dir: {args.val_dir}")
+    
+    trainset = MaskDataset(data_dir=args.data_dir, transform=transform, mask_transform=mask_transform)
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
 
-    valset = MaskDataset(data_dir=val_dir, transform=transform, mask_transform=mask_transform)
-    val_loader = DataLoader(valset, batch_size=batch_size, shuffle=False)
+    valset = MaskDataset(data_dir=args.val_dir, transform=transform, mask_transform=mask_transform)
+    val_loader = DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
 
-    print(f"Training samples: {len(trainset)}")
-    print(f"Validation samples: {len(valset)}")
+    print(f"  Training samples: {len(trainset)}")
+    print(f"  Validation samples: {len(valset)}")
+    print(f"  Training batches: {len(train_loader)}")
+    print(f"  Validation batches: {len(val_loader)}")
 
     # Load DINOv2 backbone
-    print("Loading DINOv2 backbone...")
+    print(f"\n🤖 Loading DINOv2 backbone...")
     BACKBONE_SIZE = "small"
     backbone_archs = {
         "small": "vits14",
-        "base": "vitb14_reg",
-        "large": "vitl14_reg",
-        "giant": "vitg14_reg",
+        "base": "vitb14",
+        "large": "vitl14",
+        "giant": "vitg14",
     }
     backbone_arch = backbone_archs[BACKBONE_SIZE]
     backbone_name = f"dinov2_{backbone_arch}"
@@ -450,18 +487,21 @@ def main():
     backbone_model = torch.hub.load(repo_or_dir="facebookresearch/dinov2", model=backbone_name)
     backbone_model.eval()
     backbone_model.to(device)
-    print("Backbone loaded successfully!")
+    print(f"  ✓ Loaded {backbone_name}")
 
     # Get embedding dimension from backbone
+    print(f"\n🔍 Probing backbone architecture...")
     imgs, _ = next(iter(train_loader))
     imgs = imgs.to(device)
     with torch.no_grad():
         output = backbone_model.forward_features(imgs)["x_norm_patchtokens"]
     n_embedding = output.shape[2]
-    print(f"Embedding dimension: {n_embedding}")
-    print(f"Patch tokens shape: {output.shape}")
+    print(f"  Embedding dimension: {n_embedding}")
+    print(f"  Patch tokens shape: {output.shape}")
+    print(f"  Tokens per image: {output.shape[1]} ({w // 14} x {h // 14})")
 
     # Create segmentation head
+    print(f"\n🏗️  Building segmentation head...")
     classifier = SegmentationHeadConvNeXt(
         in_channels=n_embedding,
         out_channels=n_classes,
@@ -469,10 +509,19 @@ def main():
         tokenH=h // 14
     )
     classifier = classifier.to(device)
+    
+    # Count parameters
+    total_params = sum(p.numel() for p in classifier.parameters())
+    trainable_params = sum(p.numel() for p in classifier.parameters() if p.requires_grad)
+    print(f"  Total parameters: {total_params:,}")
+    print(f"  Trainable parameters: {trainable_params:,}")
 
     # Loss and optimizer
     loss_fct = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(classifier.parameters(), lr=lr, momentum=0.9)
+    
+    print(f"  Loss function: CrossEntropyLoss")
+    print(f"  Optimizer: SGD (momentum=0.9)")
 
     # Training history
     history = {
@@ -487,17 +536,22 @@ def main():
     }
 
     # Training loop
-    print("\nStarting training...")
-    print("=" * 80)
+    print("\n" + "=" * 80)
+    print(" " * 30 + "STARTING TRAINING")
+    print("=" * 80 + "\n")
 
-    epoch_pbar = tqdm(range(n_epochs), desc="Training", unit="epoch")
-    for epoch in epoch_pbar:
+    best_val_iou = 0.0
+    
+    for epoch in range(n_epochs):
+        print(f"\n{'='*80}")
+        print(f"Epoch {epoch+1}/{n_epochs}")
+        print(f"{'='*80}")
+        
         # Training phase
         classifier.train()
         train_losses = []
 
-        train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{n_epochs} [Train]", 
-                          leave=False, unit="batch")
+        train_pbar = tqdm(train_loader, desc=f"[Train]", unit="batch", ncols=100)
         for imgs, labels in train_pbar:
             imgs, labels = imgs.to(device), labels.to(device)
 
@@ -521,8 +575,7 @@ def main():
         classifier.eval()
         val_losses = []
 
-        val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{n_epochs} [Val]", 
-                        leave=False, unit="batch")
+        val_pbar = tqdm(val_loader, desc=f"[Val]  ", unit="batch", ncols=100)
         with torch.no_grad():
             for imgs, labels in val_pbar:
                 imgs, labels = imgs.to(device), labels.to(device)
@@ -537,11 +590,12 @@ def main():
                 val_pbar.set_postfix(loss=f"{loss.item():.4f}")
 
         # Calculate metrics
+        print(f"\n  Computing metrics...")
         train_iou, train_dice, train_pixel_acc = evaluate_metrics(
-            classifier, backbone_model, train_loader, device, num_classes=n_classes
+            classifier, backbone_model, train_loader, device, num_classes=n_classes, show_progress=False
         )
         val_iou, val_dice, val_pixel_acc = evaluate_metrics(
-            classifier, backbone_model, val_loader, device, num_classes=n_classes
+            classifier, backbone_model, val_loader, device, num_classes=n_classes, show_progress=False
         )
 
         # Store history
@@ -557,34 +611,59 @@ def main():
         history['train_pixel_acc'].append(train_pixel_acc)
         history['val_pixel_acc'].append(val_pixel_acc)
 
-        # Update epoch progress bar with metrics
-        epoch_pbar.set_postfix(
-            train_loss=f"{epoch_train_loss:.3f}",
-            val_loss=f"{epoch_val_loss:.3f}",
-            val_iou=f"{val_iou:.3f}",
-            val_acc=f"{val_pixel_acc:.3f}"
-        )
+        # Print epoch summary
+        print(f"\n  📊 Epoch {epoch+1} Results:")
+        print(f"  {'─'*76}")
+        print(f"  {'Metric':<20} {'Train':>12} {'Val':>12} {'Δ':>12}")
+        print(f"  {'─'*76}")
+        print(f"  {'Loss':<20} {epoch_train_loss:>12.4f} {epoch_val_loss:>12.4f} {epoch_val_loss-epoch_train_loss:>+12.4f}")
+        print(f"  {'IoU':<20} {train_iou:>12.4f} {val_iou:>12.4f} {val_iou-train_iou:>+12.4f}")
+        print(f"  {'Dice Score':<20} {train_dice:>12.4f} {val_dice:>12.4f} {val_dice-train_dice:>+12.4f}")
+        print(f"  {'Pixel Accuracy':<20} {train_pixel_acc:>12.4f} {val_pixel_acc:>12.4f} {val_pixel_acc-train_pixel_acc:>+12.4f}")
+        print(f"  {'─'*76}")
+        
+        # Save best model
+        if val_iou > best_val_iou:
+            best_val_iou = val_iou
+            model_path = os.path.join(args.save_dir, "best_model.pth")
+            torch.save(classifier.state_dict(), model_path)
+            print(f"  💾 New best model saved! (Val IoU: {val_iou:.4f})")
+        
+        # Save checkpoint every 10 epochs
+        if (epoch + 1) % 10 == 0:
+            checkpoint_path = os.path.join(args.save_dir, f"checkpoint_epoch_{epoch+1}.pth")
+            torch.save(classifier.state_dict(), checkpoint_path)
+            print(f"  💾 Checkpoint saved: epoch_{epoch+1}.pth")
 
-    # Save plots
-    print("\nSaving training curves...")
-    save_training_plots(history, output_dir)
-    save_history_to_file(history, output_dir)
+    # Save final plots and metrics
+    print("\n" + "=" * 80)
+    print(" " * 25 + "TRAINING COMPLETE!")
+    print("=" * 80)
+    
+    print(f"\n📊 Generating plots and reports...")
+    save_training_plots(history, train_stats_dir)
+    save_history_to_file(history, train_stats_dir)
 
-    # Save model (in scripts directory)
-    model_path = os.path.join(script_dir, "segmentation_head.pth")
-    torch.save(classifier.state_dict(), model_path)
-    print(f"Saved model to '{model_path}'")
+    # Save final model
+    final_model_path = os.path.join(args.save_dir, "segmentation_head_final.pth")
+    torch.save(classifier.state_dict(), final_model_path)
+    print(f"✓ Saved final model to '{final_model_path}'")
 
-    # Final evaluation
-    print("\nFinal evaluation results:")
-    print(f"  Final Val Loss:     {history['val_loss'][-1]:.4f}")
-    print(f"  Final Val IoU:      {history['val_iou'][-1]:.4f}")
-    print(f"  Final Val Dice:     {history['val_dice'][-1]:.4f}")
-    print(f"  Final Val Accuracy: {history['val_pixel_acc'][-1]:.4f}")
-
-    print("\nTraining complete!")
-
+    # Final summary
+    print(f"\n" + "=" * 80)
+    print(" " * 30 + "FINAL SUMMARY")
+    print("=" * 80)
+    print(f"\n  📈 Best Results:")
+    print(f"  {'─'*76}")
+    print(f"  Best Val IoU:      {max(history['val_iou']):.4f} (Epoch {np.argmax(history['val_iou']) + 1})")
+    print(f"  Best Val Dice:     {max(history['val_dice']):.4f} (Epoch {np.argmax(history['val_dice']) + 1})")
+    print(f"  Best Val Accuracy: {max(history['val_pixel_acc']):.4f} (Epoch {np.argmax(history['val_pixel_acc']) + 1})")
+    print(f"  Lowest Val Loss:   {min(history['val_loss']):.4f} (Epoch {np.argmin(history['val_loss']) + 1})")
+    print(f"  {'─'*76}")
+    
+    print(f"\n  💾 All files saved to: {args.save_dir}")
+    print(f"  📊 Training plots: {train_stats_dir}")
+    print(f"\n{'='*80}\n")
 
 if __name__ == "__main__":
     main()
-
